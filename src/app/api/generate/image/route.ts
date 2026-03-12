@@ -1,11 +1,13 @@
 ﻿import { generateImageFromProvider } from "@/lib/ai/image-providers";
 import { aspectRatios } from "@/lib/ai/types";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+export const dynamic = "force-dynamic";
 
 const generateSchema = z.object({
   providerId: z.string(),
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
   const params = parsed.data;
   const generationId = nanoid();
 
-  await db.insert(generations).values({
+  await getDb().insert(generations).values({
     id: generationId,
     prompt: params.prompt,
     negativePrompt: params.negativePrompt,
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     const result = await generateImageFromProvider(params);
     const resultUrl = `data:image/png;base64,${result.image.base64}`;
 
-    await db
+    await getDb()
       .update(generations)
       .set({
         status: "completed",
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
       status: "completed",
     });
   } catch (error) {
-    await db
+    await getDb()
       .update(generations)
       .set({ status: "failed" })
       .where(eq(generations.id, generationId));

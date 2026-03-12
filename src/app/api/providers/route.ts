@@ -3,8 +3,10 @@ import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { decrypt, encrypt } from "@/lib/crypto";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { providers } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 
 const providerTypeSchema = z.enum(["openai-compatible", "google"]);
 const capabilitySchema = z.array(z.literal("image")).min(1);
@@ -38,9 +40,8 @@ function maskApiKey(value: string) {
   return value.length > 8 ? `${value.slice(0, 8)}****` : "****";
 }
 
-// GET /api/providers - 获取所有 Provider
 export async function GET() {
-  const allProviders = await db
+  const allProviders = await getDb()
     .select()
     .from(providers)
     .orderBy(desc(providers.createdAt));
@@ -59,7 +60,6 @@ export async function GET() {
   return NextResponse.json(safeProviders);
 }
 
-// POST /api/providers - 创建 Provider
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = providerCreateSchema.safeParse(body);
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   const data = parsed.data;
 
-  await db.insert(providers).values({
+  await getDb().insert(providers).values({
     id: nanoid(),
     name: data.name,
     type: data.type,
@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true }, { status: 201 });
 }
 
-// PUT /api/providers - 更新 Provider
 export async function PUT(req: NextRequest) {
   const body = await req.json();
   const { id, ...rest } = body;
@@ -126,12 +125,11 @@ export async function PUT(req: NextRequest) {
     updateData.apiKey = encrypt(nextApiKey);
   }
 
-  await db.update(providers).set(updateData).where(eq(providers.id, id));
+  await getDb().update(providers).set(updateData).where(eq(providers.id, id));
 
   return NextResponse.json({ success: true });
 }
 
-// DELETE /api/providers - 删除 Provider
 export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -140,7 +138,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "缺少 id" }, { status: 400 });
   }
 
-  await db.delete(providers).where(eq(providers.id, id));
+  await getDb().delete(providers).where(eq(providers.id, id));
 
   return NextResponse.json({ success: true });
 }

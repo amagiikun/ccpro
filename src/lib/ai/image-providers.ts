@@ -1,9 +1,9 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+﻿import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateImage } from "ai";
 import { eq } from "drizzle-orm";
 import { decrypt } from "@/lib/crypto";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { providers } from "@/lib/db/schema";
 import type { GenerateImageParams, ProviderConfig } from "./types";
 
@@ -25,7 +25,7 @@ function buildImageProvider(config: ProviderConfig) {
 }
 
 export async function generateImageFromProvider(params: GenerateImageParams) {
-  const provider = await db.query.providers.findFirst({
+  const provider = await getDb().query.providers.findFirst({
     where: eq(providers.id, params.providerId),
   });
 
